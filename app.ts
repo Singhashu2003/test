@@ -35,25 +35,29 @@ export class App {
         counter-reset: item;
         list-style: none;
         margin: 0;
-        padding-left: 2.75rem;
+        padding-left: 0;
       }
 
       ol ol {
         margin-top: 0.35rem;
+        margin-left: 1.5rem;
       }
 
       ol li {
         display: block;
         position: relative;
         margin: 0.35rem 0;
+        padding-left: 3.75rem;
       }
 
       ol li::before {
         content: counters(item, '.') '.';
         counter-increment: item;
         position: absolute;
-        left: -2.4rem;
-        min-width: 2rem;
+        left: 0;
+        top: 0;
+        width: 3.25rem;
+        text-align: right;
         color: #1f2a37;
         font-weight: 600;
       }
@@ -129,7 +133,7 @@ export class App {
 
   private decorateOrderedList(list: HTMLOListElement, parentPath: number[]): void {
     list.style.listStyle = 'none';
-    list.style.paddingLeft = parentPath.length === 0 ? '0' : '2rem';
+    list.style.paddingLeft = '0';
     list.style.margin = parentPath.length === 0 ? '0 0 1rem' : '0.35rem 0 0';
 
     const items = Array.from(list.children).filter(
@@ -146,28 +150,38 @@ export class App {
         (node): node is HTMLElement =>
           node instanceof HTMLOListElement || node instanceof HTMLUListElement
       );
-      const contentNodes = childNodes.filter(
-        (node) =>
-          !(node instanceof HTMLOListElement) && !(node instanceof HTMLUListElement)
+      const contentNodes = this.normalizeContentNodes(
+        childNodes.filter(
+          (node) =>
+            !(node instanceof HTMLOListElement) && !(node instanceof HTMLUListElement)
+        )
       );
 
       item.replaceChildren();
+      item.style.listStyle = 'none';
+      item.style.margin = '0.35rem 0';
+      item.style.padding = '0';
 
       const row = document.createElement('div');
-      row.style.display = 'flex';
-      row.style.alignItems = 'flex-start';
-      row.style.gap = '0.5rem';
+      row.style.display = 'table';
+      row.style.width = '100%';
+      row.style.tableLayout = 'fixed';
 
       const marker = document.createElement('span');
       marker.textContent = `${currentPath.join('.')}.`;
-      marker.style.minWidth = `${Math.max(3.2, currentPath.length * 1.4 + 1.8)}rem`;
+      marker.style.display = 'table-cell';
+      marker.style.width = `${Math.max(3.4, currentPath.length * 1.15 + 2.1)}rem`;
+      marker.style.paddingRight = '0.6rem';
+      marker.style.verticalAlign = 'top';
+      marker.style.textAlign = 'right';
       marker.style.fontWeight = '700';
       marker.style.color = '#1f2a37';
-      marker.style.flexShrink = '0';
 
       const body = document.createElement('div');
-      body.style.flex = '1';
-      body.style.minWidth = '0';
+      body.style.display = 'table-cell';
+      body.style.verticalAlign = 'top';
+      body.style.width = 'auto';
+      body.style.wordBreak = 'break-word';
 
       for (const node of contentNodes) {
         body.appendChild(node);
@@ -184,10 +198,28 @@ export class App {
         if (nestedList instanceof HTMLOListElement) {
           this.decorateOrderedList(nestedList, currentPath);
         } else if (nestedList instanceof HTMLUListElement) {
-          nestedList.style.margin = '0.35rem 0 0 2rem';
+          nestedList.style.margin = '0.35rem 0 0 1.5rem';
         }
         item.appendChild(nestedList);
       }
     });
+  }
+
+  private normalizeContentNodes(nodes: ChildNode[]): ChildNode[] {
+    const normalized: ChildNode[] = [];
+
+    for (const node of nodes) {
+      if (node.nodeType !== Node.TEXT_NODE) {
+        normalized.push(node);
+        continue;
+      }
+
+      const text = node.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+      if (text) {
+        normalized.push(document.createTextNode(text));
+      }
+    }
+
+    return normalized;
   }
 }
