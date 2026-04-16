@@ -3,6 +3,14 @@ import { FormsModule } from '@angular/forms';
 import { EditorModule, TINYMCE_SCRIPT_SRC } from '@tinymce/tinymce-angular';
 import type { EditorComponent } from '@tinymce/tinymce-angular';
 
+type OrderedListStyle =
+  | 'decimal'
+  | 'decimal-leading-zero'
+  | 'lower-alpha'
+  | 'upper-alpha'
+  | 'lower-roman'
+  | 'upper-roman';
+
 @Component({
   selector: 'app-root',
   imports: [FormsModule, EditorModule],
@@ -21,6 +29,8 @@ export class App {
     menubar: false,
     branding: false,
     plugins: 'advlist lists link table code wordcount',
+    advlist_number_styles:
+      'default,decimal,decimal-leading-zero,lower-alpha,lower-roman,upper-alpha,upper-roman',
     toolbar:
       'undo redo | blocks | bold italic underline | bullist numlist | outdent indent | link table | removeformat code',
     content_style: `
@@ -51,7 +61,6 @@ export class App {
       }
 
       ol li::before {
-        content: counters(item, '.') '.';
         counter-increment: item;
         position: absolute;
         left: 0;
@@ -60,6 +69,38 @@ export class App {
         text-align: right;
         color: #1f2a37;
         font-weight: 600;
+      }
+
+      ol li::before,
+      ol[type="1"] li::before,
+      ol[style*="list-style-type: decimal"] li::before {
+        content: counters(item, '.', decimal) '.';
+      }
+
+      ol[type="a"] li::before,
+      ol[style*="list-style-type: lower-alpha"] li::before,
+      ol[style*="list-style-type: lower-latin"] li::before {
+        content: counters(item, '.', lower-alpha) '.';
+      }
+
+      ol[type="A"] li::before,
+      ol[style*="list-style-type: upper-alpha"] li::before,
+      ol[style*="list-style-type: upper-latin"] li::before {
+        content: counters(item, '.', upper-alpha) '.';
+      }
+
+      ol[type="i"] li::before,
+      ol[style*="list-style-type: lower-roman"] li::before {
+        content: counters(item, '.', lower-roman) '.';
+      }
+
+      ol[type="I"] li::before,
+      ol[style*="list-style-type: upper-roman"] li::before {
+        content: counters(item, '.', upper-roman) '.';
+      }
+
+      ol[style*="list-style-type: decimal-leading-zero"] li::before {
+        content: counters(item, '.', decimal-leading-zero) '.';
       }
     `
   };
@@ -131,7 +172,11 @@ export class App {
     }
   }
 
-  private decorateOrderedList(list: HTMLOListElement, parentPath: number[]): void {
+  private decorateOrderedList(
+    list: HTMLOListElement,
+    parentPath: Array<{ index: number; style: OrderedListStyle }>
+  ): void {
+    const listStyle = this.getOrderedListStyle(list);
     list.style.listStyle = 'none';
     list.style.paddingLeft = '0';
     list.style.margin = parentPath.length === 0 ? '0 0 1rem' : '0.35rem 0 0';
@@ -141,7 +186,7 @@ export class App {
     );
 
     items.forEach((item, index) => {
-      const currentPath = [...parentPath, index + 1];
+      const currentPath = [...parentPath, { index: index + 1, style: listStyle }];
       item.style.display = 'block';
       item.style.margin = '0.35rem 0';
 
@@ -168,7 +213,7 @@ export class App {
       row.style.tableLayout = 'fixed';
 
       const marker = document.createElement('span');
-      marker.textContent = `${currentPath.join('.')}.`;
+      marker.textContent = `${this.formatMarkerPath(currentPath)}.`;
       marker.style.display = 'table-cell';
       marker.style.width = `${Math.max(3.4, currentPath.length * 1.15 + 2.1)}rem`;
       marker.style.paddingRight = '0.6rem';
@@ -221,5 +266,106 @@ export class App {
     }
 
     return normalized;
+  }
+
+  private getOrderedListStyle(list: HTMLOListElement): OrderedListStyle {
+    const inlineStyle = list.style.listStyleType?.trim().toLowerCase();
+    if (this.isSupportedOrderedListStyle(inlineStyle)) {
+      return inlineStyle;
+    }
+
+    const type = list.getAttribute('type');
+    switch (type) {
+      case 'a':
+        return 'lower-alpha';
+      case 'A':
+        return 'upper-alpha';
+      case 'i':
+        return 'lower-roman';
+      case 'I':
+        return 'upper-roman';
+      default:
+        return 'decimal';
+    }
+  }
+
+  private isSupportedOrderedListStyle(
+    value: string | null | undefined
+  ): value is OrderedListStyle {
+    return (
+      value === 'decimal' ||
+      value === 'decimal-leading-zero' ||
+      value === 'lower-alpha' ||
+      value === 'upper-alpha' ||
+      value === 'lower-roman' ||
+      value === 'upper-roman'
+    );
+  }
+
+  private formatMarkerPath(
+    path: Array<{ index: number; style: OrderedListStyle }>
+  ): string {
+    return path.map((segment) => this.formatMarkerSegment(segment.index, segment.style)).join('.');
+  }
+
+  private formatMarkerSegment(index: number, style: OrderedListStyle): string {
+    switch (style) {
+      case 'lower-alpha':
+        return this.toAlphabetic(index).toLowerCase();
+      case 'upper-alpha':
+        return this.toAlphabetic(index).toUpperCase();
+      case 'lower-roman':
+        return this.toRoman(index).toLowerCase();
+      case 'upper-roman':
+        return this.toRoman(index).toUpperCase();
+      case 'decimal-leading-zero':
+        return index.toString().padStart(2, '0');
+      case 'decimal':
+      default:
+        return index.toString();
+    }
+  }
+
+  private toAlphabetic(index: number): string {
+    let value = index;
+    let result = '';
+
+    while (value > 0) {
+      value -= 1;
+      result = String.fromCharCode(97 + (value % 26)) + result;
+      value = Math.floor(value / 26);
+    }
+
+    return result;
+  }
+
+  private toRoman(index: number): string {
+    const numerals: Array<[number, string]> = [
+      [1000, 'M'],
+      [900, 'CM'],
+      [500, 'D'],
+      [400, 'CD'],
+      [100, 'C'],
+      [90, 'XC'],
+      [50, 'L'],
+      [40, 'XL'],
+      [10, 'X'],
+      [9, 'IX'],
+      [5, 'V'],
+      [4, 'IV'],
+      [1, 'I']
+    ];
+
+    let value = index;
+    let result = '';
+
+    for (const [numeric, symbol] of numerals) {
+      while (value >= numeric) {
+        result += symbol;
+        value -= numeric;
+      }
+    }
+
+    return result || index.toString();
   }
 }
