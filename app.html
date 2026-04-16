@@ -1,0 +1,32 @@
+<main class="page-shell">
+  <section class="editor-card">
+    <div class="copy-block">
+      <p class="eyebrow">Rich Text Editor</p>
+      <h1>TinyMCE is initialized in `src/app`</h1>
+      <p class="intro">
+        This standalone Angular component uses the TinyMCE Angular wrapper with a
+        local script source, so the editor is loaded from installed packages instead
+        of a CDN.
+      </p>
+    </div>
+
+    <editor
+      [(ngModel)]="content"
+      (ngModelChange)="handleContentChange($event)"
+      [init]="editorConfig"
+      apiKey="no-api-key"
+    ></editor>
+
+    <section class="preview-panel">
+      <div class="preview-header">
+        <h2>Preview HTML Payload</h2>
+        <p>
+          This is the self-contained HTML you can send to your external preview API.
+        </p>
+      </div>
+
+      <pre>{{ previewHtml }}</pre>
+      <div class="rendered-preview" [innerHTML]="previewHtml"></div>
+    </section>
+  </section>
+</main>
