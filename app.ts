@@ -37,4 +37,11 @@ Enable Use Regular Expression (.*) and search:
 
 \bp-[\w-]+\b
 
-This is usually the quickest way to locate all old PrimeFlex utility classes that need migration to the new syntax.
+This is usually the quickest way to locate all old PrimeFlex utility classes that need migration to the new syntax
+
+
+
+good search
+\b(?:p-)?(?:d-flex|jc(?:-[a-z]+)?-[a-z-]+|ai(?:-[a-z]+)?-[a-z-]+)\b
+
+  
